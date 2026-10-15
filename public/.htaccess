@@ -1,0 +1,23 @@
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Auf HTTPS umleiten (sobald das SSL-Zertifikat aktiv ist)
+  RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+  # Ohne www auf www umleiten
+  RewriteCond %{HTTP_HOST} ^sellersdelight\.de$ [NC]
+  RewriteRule ^ https://www.sellersdelight.de%{REQUEST_URI} [L,R=301]
+  # Alle Anfragen, die keine Datei sind, an index.php
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType image/svg+xml "access plus 30 days"
+</IfModule>

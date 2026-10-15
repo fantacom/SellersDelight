@@ -1,1 +1,0 @@
-<span class="stars <%= typeof size !== 'undefined' ? size : '' %>" role="img" aria-label="<%= value ? formatRating(value) + ' von 5 Sternen' : 'Noch keine Bewertung' %>"><span style="width:<%= Math.max(0, Math.min(100, (Number(value) || 0) / 5 * 100)).toFixed(1) %>%"></span></span>

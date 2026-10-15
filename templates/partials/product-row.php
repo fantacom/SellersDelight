@@ -1,0 +1,11 @@
+<div class="product-row">
+  <button type="button" class="btn btn-ghost btn-sm remove" data-remove-product aria-label="Produkt entfernen">✕</button>
+  <div class="grid-2">
+    <div class="field"><label>Produkt / Leistung</label><input type="text" name="product_name[]" value="<?= e($pr['name'] ?? '') ?>" maxlength="150"></div>
+    <div class="field"><label>Link zur Produktseite</label><input type="text" name="product_url[]" value="<?= e($pr['url'] ?? '') ?>" placeholder="https://" maxlength="300"></div>
+  </div>
+  <div class="grid-2">
+    <div class="field"><label>Kurzbeschreibung</label><input type="text" name="product_description[]" value="<?= e($pr['description'] ?? '') ?>" maxlength="1000"></div>
+    <div class="field"><label>Preis-Info <span class="hint">optional, z. B. „ab 49 € pro Bild“</span></label><input type="text" name="product_price[]" value="<?= e($pr['price_info'] ?? '') ?>" maxlength="100"></div>
+  </div>
+</div>
