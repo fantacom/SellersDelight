@@ -19,7 +19,8 @@ Bewertungsplattform für Dienstleister von E-Commerce-Sellern (Fotostudios, Agen
 - Dritten (z. B. dem Dienstleister selbst) Zugriff auf einzelne Anbieter geben – je Bereich steuerbar: Firmendaten, Beschreibung, Produkte. Direkt aus dem Anbieter-Profil: „Zugang anlegen" verschickt „Für Sie wurde ein Zugang angelegt …"
 
 **Bearbeiter (`/konto`)**
-- Sieht nur zugewiesene Anbieter, bearbeitet nur freigegebene Bereiche. Änderungen sind sofort online.
+- Sieht nur zugewiesene Anbieter, bearbeitet nur freigegebene Bereiche.
+- Änderungen gehen als Vorschlag ins Backend („Profil-Änderungen") und werden erst nach Freigabe übernommen – mit Vorher/Nachher-Vergleich und optionaler Anmerkung per E-Mail an den Bearbeiter.
 
 ## Technik
 

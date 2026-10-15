@@ -332,3 +332,8 @@ td .sub { font-size: .8rem; color: var(--slate-500); }
 .main-nav a.btn, .main-nav a.btn:hover { color: var(--white); background: var(--blue-600); }
 .main-nav a.btn:hover { background: var(--blue-700); }
 .main-nav .btn-ghost { font-size: .95rem; font-weight: 500; padding: 8px 12px; }
+table.diff td { white-space: pre-line; word-break: break-word; }
+table.diff tr.same td { color: var(--slate-400); }
+table.diff tr.changed .before { background: #fef2f2; text-decoration: line-through; text-decoration-color: rgba(185, 28, 28, .4); }
+table.diff tr.changed .after { background: #f0fdf4; color: var(--slate-900); }
+.changed-card { border-color: #bbf7d0; }

@@ -96,6 +96,20 @@ CREATE TABLE IF NOT EXISTS provider_editors (
   PRIMARY KEY (user_id, provider_id)
 );
 
+-- Änderungsvorschläge externer Bearbeiter, werden erst nach Freigabe übernommen
+CREATE TABLE IF NOT EXISTS provider_changes (
+  id INTEGER PRIMARY KEY,
+  provider_id INTEGER NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  data TEXT NOT NULL,
+  sections TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  note TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  reviewed_at TEXT,
+  reviewed_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
   sid TEXT PRIMARY KEY,
   data TEXT NOT NULL,
@@ -104,6 +118,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE INDEX IF NOT EXISTS idx_reviews_provider ON reviews(provider_id, status);
 CREATE INDEX IF NOT EXISTS idx_providers_status ON providers(status);
+CREATE INDEX IF NOT EXISTS idx_changes_status ON provider_changes(status, provider_id);
 `);
 
 function transaction(fn) {

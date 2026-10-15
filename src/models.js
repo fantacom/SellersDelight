@@ -144,26 +144,24 @@ const providers = {
         db.prepare('UPDATE providers SET status = ? WHERE id = ?').run(status, providerId);
       }
 
+      const input = normalizeInput(data);
+
       if (sections.master) {
-        const founded = parseInt(data.founded_year, 10);
-        const name = str(data.name, 150);
+        const m = input.master;
         db.prepare(`
           UPDATE providers SET name=?, slug=?, legal_form=?, street=?, zip=?, city=?, country=?,
             founded_year=?, employees=?, website=?, email=?, phone=?
           WHERE id=?
         `).run(
-          name, uniqueSlug(db, 'providers', data.slug || name, providerId),
-          str(data.legal_form, 40), str(data.street, 150), str(data.zip, 15), str(data.city, 100),
-          str(data.country, 60) || 'Deutschland',
-          founded >= 1800 && founded <= 2100 ? founded : null,
-          str(data.employees, 30), normalizeUrl(data.website), str(data.email, 150), str(data.phone, 50),
-          providerId,
+          m.name, uniqueSlug(db, 'providers', data.slug || m.name, providerId),
+          m.legal_form, m.street, m.zip, m.city, m.country, m.founded_year,
+          m.employees, m.website, m.email, m.phone, providerId,
         );
       }
 
       if (sections.description) {
         db.prepare('UPDATE providers SET short_description=?, description=? WHERE id=?')
-          .run(str(data.short_description, 240), str(data.description, 20000), providerId);
+          .run(input.description.short_description, input.description.description, providerId);
       }
 
       if (sections.categories) {
@@ -176,16 +174,8 @@ const providers = {
 
       if (sections.products) {
         db.prepare('DELETE FROM products WHERE provider_id = ?').run(providerId);
-        const names = toArray(data.product_name);
-        const descs = toArray(data.product_description);
-        const urls = toArray(data.product_url);
-        const prices = toArray(data.product_price);
         const ins = db.prepare('INSERT INTO products (provider_id, name, description, url, price_info, sort_order) VALUES (?,?,?,?,?,?)');
-        names.slice(0, 30).forEach((n, i) => {
-          const name = str(n, 150);
-          if (!name) return;
-          ins.run(providerId, name, str(descs[i], 1000), normalizeUrl(urls[i]), str(prices[i], 100), i);
-        });
+        input.products.forEach((pr, i) => ins.run(providerId, pr.name, pr.description, pr.url, pr.price_info, i));
       }
 
       db.prepare("UPDATE providers SET updated_at = datetime('now') WHERE id = ?").run(providerId);
@@ -207,6 +197,37 @@ const providers = {
     return out;
   },
 };
+
+/** Bereinigt Formulardaten (Längen, URLs, Jahr) – genutzt beim Speichern und für die Änderungsvorschau. */
+function normalizeInput(data) {
+  const founded = parseInt(data.founded_year, 10);
+  const names = toArray(data.product_name);
+  const descs = toArray(data.product_description);
+  const urls = toArray(data.product_url);
+  const prices = toArray(data.product_price);
+  return {
+    master: {
+      name: str(data.name, 150),
+      legal_form: str(data.legal_form, 40),
+      street: str(data.street, 150),
+      zip: str(data.zip, 15),
+      city: str(data.city, 100),
+      country: str(data.country, 60) || 'Deutschland',
+      founded_year: founded >= 1800 && founded <= 2100 ? founded : null,
+      employees: str(data.employees, 30),
+      website: normalizeUrl(data.website),
+      email: str(data.email, 150),
+      phone: str(data.phone, 50),
+    },
+    description: {
+      short_description: str(data.short_description, 240),
+      description: str(data.description, 20000),
+    },
+    products: names.slice(0, 30)
+      .map((n, i) => ({ name: str(n, 150), description: str(descs[i], 1000), url: normalizeUrl(urls[i]), price_info: str(prices[i], 100) }))
+      .filter((pr) => pr.name),
+  };
+}
 
 function attachCategories(rows) {
   if (!rows.length) return rows;
@@ -268,6 +289,57 @@ const reviews = {
     `).all(limit);
   },
 };
+
+/* ---------- Änderungsvorschläge externer Bearbeiter ---------- */
+
+const changes = {
+  /** Legt einen Änderungsvorschlag an; ein noch offener Vorschlag desselben Bearbeiters wird ersetzt. */
+  submit(providerId, userId, data, sections) {
+    return transaction(() => {
+      db.prepare("DELETE FROM provider_changes WHERE provider_id = ? AND user_id = ? AND status = 'pending'").run(providerId, userId);
+      const res = db.prepare('INSERT INTO provider_changes (provider_id, user_id, data, sections) VALUES (?,?,?,?)')
+        .run(providerId, userId, JSON.stringify(data), JSON.stringify(sections));
+      return Number(res.lastInsertRowid);
+    });
+  },
+  byId(id) {
+    return hydrate(db.prepare(`
+      SELECT c.*, p.name AS provider_name, p.slug AS provider_slug, u.name AS user_name, u.email AS user_email
+      FROM provider_changes c JOIN providers p ON p.id = c.provider_id LEFT JOIN users u ON u.id = c.user_id
+      WHERE c.id = ?
+    `).get(id));
+  },
+  pendingFor(providerId, userId) {
+    return hydrate(db.prepare("SELECT * FROM provider_changes WHERE provider_id = ? AND user_id = ? AND status = 'pending'").get(providerId, userId));
+  },
+  lastDecidedFor(providerId, userId) {
+    return db.prepare(`
+      SELECT status, reviewed_at, note FROM provider_changes WHERE provider_id = ? AND user_id = ? AND status != 'pending'
+      ORDER BY reviewed_at DESC, id DESC LIMIT 1
+    `).get(providerId, userId);
+  },
+  list(status = 'pending') {
+    return db.prepare(`
+      SELECT c.*, p.name AS provider_name, u.name AS user_name, u.email AS user_email
+      FROM provider_changes c JOIN providers p ON p.id = c.provider_id LEFT JOIN users u ON u.id = c.user_id
+      WHERE c.status = ? ORDER BY c.created_at ${status === 'pending' ? 'ASC' : 'DESC'} LIMIT 300
+    `).all(status);
+  },
+  countPending() {
+    return db.prepare("SELECT COUNT(*) n FROM provider_changes WHERE status = 'pending'").get().n;
+  },
+  decide(id, status, reviewerId, note = '') {
+    db.prepare("UPDATE provider_changes SET status = ?, reviewed_by = ?, reviewed_at = datetime('now'), note = ? WHERE id = ?")
+      .run(status, reviewerId, note, id);
+  },
+};
+
+function hydrate(row) {
+  if (!row) return row;
+  row.data = JSON.parse(row.data);
+  row.sections = JSON.parse(row.sections);
+  return row;
+}
 
 /* ---------- Benutzer & Bearbeitungsrechte ---------- */
 
@@ -333,4 +405,4 @@ const users = {
   },
 };
 
-module.exports = { categories, providers, reviews, users, SORTS };
+module.exports = { categories, providers, reviews, users, changes, normalizeInput, SORTS };

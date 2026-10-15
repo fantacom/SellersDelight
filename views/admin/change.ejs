@@ -1,0 +1,54 @@
+<%- include('../partials/admin-start') %>
+<div class="breadcrumb"><a href="/admin/aenderungen">Profil-Änderungen</a> / <%= provider.name %></div>
+<div class="section-head">
+  <h1 style="margin:0">Änderung an <%= provider.name %></h1>
+  <span class="badge badge-<%= change.status %>"><%= { pending: 'Zur Prüfung', approved: 'Übernommen', rejected: 'Abgelehnt' }[change.status] %></span>
+</div>
+<p class="muted">Eingereicht von <strong><%= change.user_name || '–' %></strong> <%= change.user_email ? '(' + change.user_email + ')' : '' %> am <%= formatDate(change.created_at) %>.
+  Verglichen mit dem aktuellen Live-Stand; geänderte Felder sind markiert.</p>
+<% if (change.note) { %><div class="alert alert-info">Anmerkung: <%= change.note %></div><% } %>
+
+<% const changedCount = diff.rows.filter(r => r.changed).length + (diff.products && diff.products.changed ? 1 : 0); %>
+<% if (!changedCount) { %><div class="alert alert-info">Keine inhaltlichen Unterschiede zum aktuellen Stand.</div><% } %>
+
+<% if (diff.rows.length) { %>
+<div class="table-wrap" style="margin-bottom:20px">
+  <table class="diff">
+    <thead><tr><th style="width:18%">Feld</th><th style="width:41%">Aktuell</th><th>Vorschlag</th></tr></thead>
+    <tbody>
+    <% diff.rows.forEach(r => { %>
+      <tr class="<%= r.changed ? 'changed' : 'same' %>">
+        <td><strong><%= r.label %></strong></td>
+        <td class="before"><%= r.before || '–' %></td>
+        <td class="after"><%= r.after || '–' %></td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table>
+</div>
+<% } %>
+
+<% if (diff.products) { %>
+<div class="card <%= diff.products.changed ? 'changed-card' : '' %>">
+  <h3>Produkte &amp; Leistungen <%= diff.products.changed ? '' : '(unverändert)' %></h3>
+  <div class="grid-2">
+    <div><div class="small muted">Aktuell</div><ul class="small"><% diff.products.before.forEach(p => { %><li><%= p %></li><% }) %><% if (!diff.products.before.length) { %><li>–</li><% } %></ul></div>
+    <div><div class="small muted">Vorschlag</div><ul class="small"><% diff.products.after.forEach(p => { %><li><%= p %></li><% }) %><% if (!diff.products.after.length) { %><li>–</li><% } %></ul></div>
+  </div>
+</div>
+<% } %>
+
+<% if (change.status === 'pending') { %>
+<div class="card">
+  <h3>Entscheidung</h3>
+  <form method="post">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="field"><label for="note">Anmerkung an den Bearbeiter <span class="hint">optional, wird per E-Mail mitgeschickt</span></label><input id="note" type="text" name="note" maxlength="1000"></div>
+    <div class="btn-row">
+      <button class="btn btn-success" formaction="/admin/aenderungen/<%= change.id %>/freigeben">Übernehmen &amp; veröffentlichen</button>
+      <button class="btn btn-secondary" formaction="/admin/aenderungen/<%= change.id %>/ablehnen">Ablehnen</button>
+    </div>
+  </form>
+</div>
+<% } %>
+<%- include('../partials/admin-end') %>

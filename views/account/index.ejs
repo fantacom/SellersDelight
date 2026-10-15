@@ -13,7 +13,7 @@
             <tbody>
               <% assignments.forEach(a => { %>
               <tr>
-                <td><strong><%= a.provider_name %></strong><div class="sub"><span class="badge badge-<%= a.provider_status %>"><%= { pending: 'In Prüfung', published: 'Online', rejected: 'Abgelehnt' }[a.provider_status] %></span></div></td>
+                <td><strong><%= a.provider_name %></strong><div class="sub"><span class="badge badge-<%= a.provider_status %>"><%= { pending: 'In Prüfung', published: 'Online', rejected: 'Abgelehnt' }[a.provider_status] %></span><% if (a.pendingChange) { %> <span class="badge badge-pending">Änderung in Prüfung</span><% } %></div></td>
                 <td class="small"><%= [a.can_edit_master && 'Firmendaten', a.can_edit_description && 'Beschreibung', a.can_edit_products && 'Produkte'].filter(Boolean).join(', ') || '–' %></td>
                 <td style="text-align:right" class="nowrap">
                   <% if (a.provider_status === 'published') { %><a class="btn btn-ghost btn-sm" href="/anbieter/<%= a.provider_slug %>">Ansehen</a><% } %>

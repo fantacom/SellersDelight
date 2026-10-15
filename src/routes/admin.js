@@ -2,7 +2,8 @@
 
 const express = require('express');
 const { requireAdmin } = require('../auth');
-const { categories, providers, reviews, users } = require('../models');
+const { categories, providers, reviews, users, changes, normalizeInput } = require('../models');
+const { sendMail } = require('../mail');
 const { str, isEmail } = require('../util');
 const { sendInvite, inviteFlash } = require('../invite');
 const { formToProvider } = require('./public');
@@ -10,7 +11,11 @@ const { formToProvider } = require('./public');
 const router = express.Router();
 router.use(requireAdmin);
 router.use((req, res, next) => {
-  res.locals.pending = { reviews: reviews.countByStatus().pending, providers: providers.countByStatus().pending };
+  res.locals.pending = {
+    reviews: reviews.countByStatus().pending,
+    providers: providers.countByStatus().pending,
+    changes: changes.countPending(),
+  };
   next();
 });
 
@@ -31,6 +36,7 @@ router.get('/', (req, res) => {
     providerCounts: providers.countByStatus(),
     pendingReviews: reviews.list('pending').slice(0, 5),
     pendingProviders: providers.list({ status: 'pending', sort: 'newest', limit: 5 }),
+    pendingChanges: changes.list('pending').slice(0, 5),
     categoryCount: categories.all().length,
     userCount: users.all().length,
   });
@@ -158,6 +164,75 @@ router.post('/anbieter/:id/zugang', wrap(async (req, res, next) => {
     req.flash('success', `Zugriff für ${email} gespeichert.`);
   }
   res.redirect(`/admin/anbieter/${provider.id}#zugaenge`);
+}));
+
+/* ---------- Änderungsvorschläge ---------- */
+
+const FIELD_LABELS = {
+  master: {
+    name: 'Firmenname', legal_form: 'Rechtsform', street: 'Straße', zip: 'PLZ', city: 'Ort', country: 'Land',
+    founded_year: 'Gegründet', employees: 'Mitarbeiter', website: 'Website', email: 'E-Mail', phone: 'Telefon',
+  },
+  description: { short_description: 'Kurzbeschreibung', description: 'Beschreibung' },
+};
+
+/** Vergleicht den Live-Stand mit dem Vorschlag – nur die Bereiche, für die der Bearbeiter Rechte hatte. */
+function buildDiff(provider, change) {
+  const proposed = normalizeInput(change.data);
+  const rows = [];
+  for (const section of ['master', 'description']) {
+    if (!change.sections[section]) continue;
+    for (const [key, label] of Object.entries(FIELD_LABELS[section])) {
+      const before = provider[key] ?? '';
+      const after = proposed[section][key] ?? '';
+      rows.push({ label, before: String(before), after: String(after), changed: String(before) !== String(after) });
+    }
+  }
+  let products = null;
+  if (change.sections.products) {
+    const fmt = (list) => list.map((p) => [p.name, p.description, p.url, p.price_info].filter(Boolean).join(' · '));
+    const before = fmt(provider.products);
+    const after = fmt(proposed.products);
+    products = { before, after, changed: JSON.stringify(before) !== JSON.stringify(after) };
+  }
+  return { rows, products };
+}
+
+router.get('/aenderungen', (req, res) => {
+  const status = ['pending', 'approved', 'rejected'].includes(req.query.status) ? req.query.status : 'pending';
+  res.render('admin/changes', { title: 'Änderungen', status, changes: changes.list(status) });
+});
+
+router.get('/aenderungen/:id', (req, res, next) => {
+  const change = changes.byId(req.params.id);
+  const provider = change && providers.byId(change.provider_id);
+  if (!provider) return next();
+  res.render('admin/change', { title: `Änderung: ${provider.name}`, change, provider, diff: buildDiff(provider, change) });
+});
+
+router.post('/aenderungen/:id/:action', wrap(async (req, res, next) => {
+  const change = changes.byId(req.params.id);
+  if (!change || !['freigeben', 'ablehnen'].includes(req.params.action)) return next();
+  if (change.status !== 'pending') {
+    req.flash('error', 'Diese Änderung wurde bereits bearbeitet.');
+    return res.redirect('/admin/aenderungen');
+  }
+  const approve = req.params.action === 'freigeben';
+  const note = str(req.body.note, 1000);
+  if (approve) providers.save(change.data, { id: change.provider_id, sections: change.sections });
+  changes.decide(change.id, approve ? 'approved' : 'rejected', req.user.id, note);
+
+  if (change.user_email) {
+    await sendMail({
+      to: change.user_email,
+      subject: approve ? `Ihre Änderungen an „${change.provider_name}" sind online` : `Ihre Änderungen an „${change.provider_name}"`,
+      text: `Hallo ${change.user_name},\n\n${approve
+        ? `Ihre Änderungen am Profil „${change.provider_name}" wurden freigegeben und sind jetzt online.`
+        : `Ihre Änderungen am Profil „${change.provider_name}" wurden leider nicht übernommen.`}${note ? `\n\nAnmerkung: ${note}` : ''}\n\n${res.locals.baseUrl}/konto/anbieter/${change.provider_id}\n\nViele Grüße\nIhr Team von Seller's Delight`,
+    });
+  }
+  req.flash('success', approve ? 'Änderung übernommen und online.' : 'Änderung abgelehnt.');
+  res.redirect('/admin/aenderungen');
 }));
 
 /* ---------- Kategorien ---------- */

@@ -1,0 +1,26 @@
+<%- include('../partials/admin-start') %>
+<h1>Profil-Änderungen</h1>
+<p class="muted">Änderungen, die Anbieter bzw. externe Bearbeiter an ihren Profilen vorgenommen haben. Sie werden erst nach Freigabe übernommen.</p>
+<div class="tabs">
+  <a href="?status=pending" class="<%= status === 'pending' ? 'active' : '' %>">Zur Prüfung (<%= pending.changes %>)</a>
+  <a href="?status=approved" class="<%= status === 'approved' ? 'active' : '' %>">Übernommen</a>
+  <a href="?status=rejected" class="<%= status === 'rejected' ? 'active' : '' %>">Abgelehnt</a>
+</div>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Anbieter</th><th>Eingereicht von</th><th>Datum</th><th>Bereiche</th><th></th></tr></thead>
+    <tbody>
+    <% if (!changes.length) { %><tr><td colspan="5" class="muted">Keine Einträge.</td></tr><% } %>
+    <% changes.forEach(c => { const sec = JSON.parse(c.sections); %>
+      <tr>
+        <td><strong><%= c.provider_name %></strong></td>
+        <td><%= c.user_name || '–' %><div class="sub"><%= c.user_email || '' %></div></td>
+        <td class="small nowrap"><%= formatDate(c.created_at) %></td>
+        <td class="small"><%= [sec.master && 'Firmendaten', sec.description && 'Beschreibung', sec.products && 'Produkte'].filter(Boolean).join(', ') %></td>
+        <td style="text-align:right"><a class="btn <%= c.status === 'pending' ? '' : 'btn-ghost' %> btn-sm" href="/admin/aenderungen/<%= c.id %>"><%= c.status === 'pending' ? 'Prüfen' : 'Ansehen' %></a></td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/admin-end') %>
