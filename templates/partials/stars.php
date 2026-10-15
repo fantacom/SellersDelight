@@ -1,0 +1,1 @@
+<?php $pct = max(0, min(100, ((float) ($value ?? 0)) / 5 * 100)); ?><span class="stars <?= e($size ?? '') ?>" role="img" aria-label="<?= $value ? e(format_rating($value)) . ' von 5 Sternen' : 'Noch keine Bewertung' ?>"><span style="width:<?= number_format($pct, 1, '.', '') ?>%"></span></span>

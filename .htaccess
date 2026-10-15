@@ -1,0 +1,9 @@
+# Fallback, falls die Domain auf das Hauptverzeichnis statt auf /public zeigt:
+# Alles nach /public umleiten und App-Dateien sperren.
+Options -Indexes
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^(app|templates|tools)(/|$) - [F,L]
+  RewriteRule ^(config\.php|config\.sample\.php|README\.md)$ - [F,L]
+  RewriteRule ^(?!public/)(.*)$ public/$1 [L]
+</IfModule>

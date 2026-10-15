@@ -1,58 +1,55 @@
 # Seller's Delight
 
 Bewertungsplattform für Dienstleister von E-Commerce-Sellern (Fotostudios, Agenturen, Steuerberater, 3PL …).
+Läuft auf normalem PHP-Webhosting (z. B. IONOS Webhosting) mit MySQL/MariaDB – ohne zusätzliche Software.
 
 ## Funktionen
 
 **Öffentlich**
 - Kategorien-Übersicht, Ranking je Kategorie (Bayes-gewichteter Durchschnitt, damit eine einzelne 5-Sterne-Bewertung nicht automatisch Platz 1 ist), Sortierung nach Bewertung / Anzahl / Name / neu
-- Anbieter-Profil: Firmendaten (Adresse, Gründungsjahr, Mitarbeiter, Kontakt), ausführliche Beschreibung, Produkte mit Links und Preis-Info, Bewertungen inkl. Verteilung
-- Bewertung abgeben (1–5 Sterne + Text) – erscheint erst nach Freigabe
-- Neuen Anbieter eintragen – erscheint erst nach Freigabe
-- Volltextsuche
+- Anbieter-Profil: Firmendaten, ausführliche Beschreibung, Produkte mit Links und Preis-Info, Bewertungen inkl. Verteilung
+- Bewertung abgeben und neuen Anbieter eintragen – beides erst nach Freigabe sichtbar
+- Suche
 
-**Backend (`/admin`, Rolle Administrator)**
-- Bewertungen freigeben / ablehnen / löschen
-- Eingereichte Anbieter freigeben / ablehnen, alle Anbieter anlegen und bearbeiten
-- Kategorien anlegen, umbenennen, sortieren, löschen
-- Benutzer anlegen (Administrator oder Bearbeiter), Einladungslink per E-Mail
-- Dritten (z. B. dem Dienstleister selbst) Zugriff auf einzelne Anbieter geben – je Bereich steuerbar: Firmendaten, Beschreibung, Produkte. Direkt aus dem Anbieter-Profil: „Zugang anlegen" verschickt „Für Sie wurde ein Zugang angelegt …"
+**Backend (`/admin`, Administratoren)**
+- Bewertungen, neue Anbieter und Profil-Änderungen freigeben / ablehnen
+- Anbieter, Kategorien und Benutzer verwalten
+- Dritten (z. B. dem Dienstleister selbst) Zugriff auf einzelne Anbieter geben – je Bereich: Firmendaten, Beschreibung, Produkte. Einladung per E-Mail.
 
 **Bearbeiter (`/konto`)**
-- Sieht nur zugewiesene Anbieter, bearbeitet nur freigegebene Bereiche.
-- Änderungen gehen als Vorschlag ins Backend („Profil-Änderungen") und werden erst nach Freigabe übernommen – mit Vorher/Nachher-Vergleich und optionaler Anmerkung per E-Mail an den Bearbeiter.
+- Sieht nur zugewiesene Anbieter, bearbeitet nur freigegebene Bereiche. Änderungen werden erst nach Freigabe im Backend übernommen (mit Vorher/Nachher-Vergleich).
 
-## Technik
+## Installation bei IONOS
 
-Node.js ≥ 22.13, Express, EJS, SQLite (eingebaut in Node, keine externe Datenbank). Keine externen Schriften/Tracker. CSRF-Schutz, bcrypt-Passwörter, Login-Ratelimit, Honeypot gegen Spam.
+1. **SSL aktivieren:** IONOS → Domains & SSL → sellersdelight.de → SSL-Zertifikat „Aktivieren“. (Die Seite leitet automatisch auf `https://www.` um – ohne Zertifikat ist sie nicht erreichbar.)
+2. **PHP-Version prüfen:** Hosting → PHP-Einstellungen → mindestens PHP 8.1 (empfohlen 8.3).
+3. **Datenbank anlegen:** Hosting → Datenbanken → „Datenbank anlegen“ (MySQL/MariaDB). Hostname, Datenbankname, Benutzername und Passwort notieren.
+4. **Dateien hochladen:** Inhalt des Projekts (bzw. der ZIP-Datei) in ein Verzeichnis `sellersdelight` im Webspace hochladen – per Webspace-Explorer im IONOS-Kundenbereich oder per SFTP.
+5. **Domain verbinden:** Domains & SSL → sellersdelight.de → Verwendungsart/Ziel → Webspace → Verzeichnis `/sellersdelight/public` wählen. (Zeigt die Domain auf `/sellersdelight`, funktioniert es auch – App-Dateien sind per `.htaccess` gesperrt.)
+6. **Installation im Browser:** `https://www.sellersdelight.de` öffnen → Datenbankdaten eintragen → anschließend den eigenen Administrator-Zugang anlegen.
+   Bitte direkt nach dem Hochladen erledigen: Bis dahin ist der Assistent für jeden erreichbar.
+7. **Impressum und Datenschutz** in `templates/public/legal.php` ausfüllen.
 
-## Start
+E-Mails (Einladungen, Benachrichtigungen) werden über die PHP-Mailfunktion von IONOS versendet. Kommt eine Einladung nicht an, zeigt das Backend den Link zum manuellen Weitergeben an.
 
-```bash
-npm install
-cp .env.example .env      # Werte eintragen
-npm start                 # http://localhost:3000
-npm run seed:demo         # optional: fiktive Beispieldaten
+## Struktur
+
+```
+public/      Webroot: index.php, CSS, JS, Logos
+app/         Logik (Datenbank, Modelle, Routen, Mail, Installer)
+templates/   HTML-Vorlagen
+tools/       seed-demo.php: fiktive Beispieldaten (Kommandozeile)
+config.php   wird vom Installationsassistenten erzeugt (nicht im Git)
 ```
 
-Beim ersten Start werden Standard-Kategorien und ein Administrator angelegt (`ADMIN_EMAIL`/`ADMIN_PASSWORD`; ohne Passwort wird eines generiert und im Log ausgegeben).
-
-Ohne SMTP-Konfiguration zeigt das Backend Einladungslinks direkt an, damit sie manuell weitergegeben werden können.
-
-### Docker
+## Lokal entwickeln
 
 ```bash
-docker build -t sellersdelight .
-docker run -p 3000:3000 -v sd-data:/data --env-file .env sellersdelight
+cp config.sample.php config.php            # lokale MySQL-Daten eintragen, 'debug' => true
+php -S localhost:8000 -t public public/index.php
+php tools/seed-demo.php                    # optional: Beispieldaten
 ```
-
-In Produktion hinter einem HTTPS-Reverse-Proxy betreiben (`NODE_ENV=production` setzt sichere Cookies).
 
 ## Logo
 
-`public/img/logo.svg` (Wort-Bild-Marke), `logo-negativ.svg` (für dunkle Hintergründe), `logo-mark.svg` (Bildmarke/App-Icon), `favicon.svg`.
-
-## Vor dem Livegang
-
-- Impressum und Datenschutzerklärung in `views/public/legal.ejs` ausfüllen
-- `SESSION_SECRET` setzen, Datenbankverzeichnis sichern (Backup)
+`public/img/logo.svg` (Wort-Bild-Marke), `logo-negativ.svg` (dunkle Hintergründe), `logo-mark.svg` (Bildmarke), `favicon.svg`.
