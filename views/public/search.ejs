@@ -1,0 +1,22 @@
+<%- include('../partials/head') %>
+<main>
+  <div class="container narrow">
+    <div class="page-head">
+      <h1>Suche</h1>
+      <form class="search-bar" action="/suche" method="get" role="search" style="box-shadow:var(--shadow);border:1px solid var(--slate-200)">
+        <label for="q" class="sr-only">Suchbegriff</label>
+        <input id="q" type="search" name="q" value="<%= q %>" placeholder="Dienstleister, Leistung oder Ort …" autofocus>
+        <button class="btn" type="submit">Suchen</button>
+      </form>
+    </div>
+    <div style="margin:24px 0 40px">
+      <% if (q && providers.length) { %>
+        <p class="muted small"><%= providers.length %> Treffer für „<%= q %>"</p>
+        <div class="provider-list"><% providers.forEach((p, i) => { %><%- include('../partials/provider-row', { p, rank: i + 1, showCats: true }) %><% }) %></div>
+      <% } else if (q) { %>
+        <div class="card empty"><p>Keine Treffer für „<%= q %>".</p><a class="btn btn-secondary" href="/anbieter-eintragen">Anbieter eintragen</a></div>
+      <% } %>
+    </div>
+  </div>
+</main>
+<%- include('../partials/foot') %>

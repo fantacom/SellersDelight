@@ -1,0 +1,88 @@
+<%- include('../partials/head') %>
+<main>
+  <section class="hero">
+    <div class="container">
+      <%- include('../partials/flash') %>
+      <h1>Die besten Dienstleister für <span class="accent nowrap">E‑Commerce‑Seller</span>.</h1>
+      <p class="lead">Fotostudios, Agenturen, Steuerberater und Fulfillment-Partner – bewertet von Sellern für Seller. Jede Bewertung wird vor der Veröffentlichung geprüft.</p>
+      <form class="search-bar" action="/suche" method="get" role="search">
+        <label for="q" class="sr-only">Dienstleister suchen</label>
+        <input id="q" type="search" name="q" placeholder="Dienstleister, Leistung oder Ort suchen …">
+        <button class="btn" type="submit">Suchen</button>
+      </form>
+      <div class="hero-stats">
+        <div><strong><%= categories.length %></strong>Kategorien</div>
+        <div><strong><%= categories.reduce((s, c) => s + c.provider_count, 0) %></strong>Einträge</div>
+        <div><strong>100 %</strong>geprüfte Bewertungen</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="kategorien">
+    <div class="container">
+      <div class="section-head">
+        <div><h2>Kategorien</h2><p class="muted" style="margin:0">Wählen Sie einen Bereich und sehen Sie die bestbewerteten Anbieter.</p></div>
+      </div>
+      <div class="cat-grid">
+        <% categories.forEach(c => { %>
+        <a class="cat-card" href="/kategorie/<%= c.slug %>">
+          <span class="icon-tile"><%- include('../partials/icon', { name: c.icon }) %></span>
+          <span>
+            <h3><%= c.name %></h3>
+            <p><%= c.description %></p>
+            <span class="count"><%= c.provider_count %> <%= c.provider_count === 1 ? 'Anbieter' : 'Anbieter' %> →</span>
+          </span>
+        </a>
+        <% }) %>
+      </div>
+    </div>
+  </section>
+
+  <% if (topRated.length) { %>
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="section-head"><h2>Bestbewertet</h2></div>
+      <div class="provider-grid">
+        <% topRated.forEach(p => { %>
+        <a class="provider-card" href="/anbieter/<%= p.slug %>">
+          <div class="top">
+            <div class="avatar"><%= p.name.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() %></div>
+            <div><h3><%= p.name %></h3><%- include('../partials/stars', { value: p.avg_rating, size: 'sm' }) %> <span class="small muted"><%= formatRating(p.avg_rating) %> · <%= p.review_count %></span></div>
+          </div>
+          <p><%= p.short_description %></p>
+          <div class="tags"><% p.categories.forEach(c => { %><span class="tag"><%= c.name %></span><% }) %></div>
+        </a>
+        <% }) %>
+      </div>
+    </div>
+  </section>
+  <% } %>
+
+  <% if (recentReviews.length) { %>
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="section-head"><h2>Neueste Erfahrungsberichte</h2></div>
+      <div class="provider-grid">
+        <% recentReviews.forEach(r => { %>
+        <a class="provider-card" href="/anbieter/<%= r.provider_slug %>#bewertungen">
+          <div><%- include('../partials/stars', { value: r.rating, size: 'sm' }) %></div>
+          <h3><%= r.title || r.provider_name %></h3>
+          <p><%= r.comment.length > 180 ? r.comment.slice(0, 180) + ' …' : r.comment %></p>
+          <span class="small muted"><%= r.author_name %> über <strong><%= r.provider_name %></strong></span>
+        </a>
+        <% }) %>
+      </div>
+    </div>
+  </section>
+  <% } %>
+
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="cta-band">
+        <div><h3>Sie kennen einen guten Dienstleister?</h3><p>Tragen Sie ihn ein – nach kurzer Prüfung ist er für alle Seller sichtbar.</p></div>
+        <a class="btn btn-lg" href="/anbieter-eintragen">Anbieter eintragen</a>
+      </div>
+    </div>
+  </section>
+</main>
+<%- include('../partials/foot') %>

@@ -1,0 +1,33 @@
+<%- include('../partials/head') %>
+<main>
+  <div class="container narrow" style="padding:36px 20px 40px">
+    <h1>Mein Konto</h1>
+    <p class="muted">Angemeldet als <%= user.name %> (<%= user.email %>) · <a href="/konto/passwort">Passwort ändern</a><% if (user.role === 'admin') { %> · <a href="/admin">Zum Backend</a><% } %></p>
+    <%- include('../partials/flash') %>
+    <div class="card">
+      <h2>Meine Anbieter-Profile</h2>
+      <% if (assignments.length) { %>
+        <div class="table-wrap" style="border:0">
+          <table>
+            <thead><tr><th>Anbieter</th><th>Bearbeitbar</th><th></th></tr></thead>
+            <tbody>
+              <% assignments.forEach(a => { %>
+              <tr>
+                <td><strong><%= a.provider_name %></strong><div class="sub"><span class="badge badge-<%= a.provider_status %>"><%= { pending: 'In Prüfung', published: 'Online', rejected: 'Abgelehnt' }[a.provider_status] %></span></div></td>
+                <td class="small"><%= [a.can_edit_master && 'Firmendaten', a.can_edit_description && 'Beschreibung', a.can_edit_products && 'Produkte'].filter(Boolean).join(', ') || '–' %></td>
+                <td style="text-align:right" class="nowrap">
+                  <% if (a.provider_status === 'published') { %><a class="btn btn-ghost btn-sm" href="/anbieter/<%= a.provider_slug %>">Ansehen</a><% } %>
+                  <a class="btn btn-sm" href="/konto/anbieter/<%= a.provider_id %>">Bearbeiten</a>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <p class="muted">Ihnen sind noch keine Anbieter-Profile zugewiesen.</p>
+      <% } %>
+    </div>
+  </div>
+</main>
+<%- include('../partials/foot') %>

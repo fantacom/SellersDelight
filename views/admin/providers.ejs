@@ -1,0 +1,35 @@
+<%- include('../partials/admin-start') %>
+<div class="section-head"><h1 style="margin:0">Anbieter</h1><a class="btn" href="/admin/anbieter/neu">+ Neuer Anbieter</a></div>
+<div class="tabs">
+  <a href="?" class="<%= !status ? 'active' : '' %>">Alle</a>
+  <a href="?status=pending" class="<%= status === 'pending' ? 'active' : '' %>">Zur Prüfung (<%= counts.pending %>)</a>
+  <a href="?status=published" class="<%= status === 'published' ? 'active' : '' %>">Veröffentlicht (<%= counts.published %>)</a>
+  <a href="?status=rejected" class="<%= status === 'rejected' ? 'active' : '' %>">Abgelehnt (<%= counts.rejected %>)</a>
+</div>
+<div class="toolbar">
+  <form method="get"><input type="hidden" name="status" value="<%= status %>"><input type="search" name="q" value="<%= q %>" placeholder="Name, Ort, Beschreibung …"><button class="btn btn-secondary">Suchen</button></form>
+</div>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Anbieter</th><th>Kategorien</th><th>Bewertung</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    <% if (!providers.length) { %><tr><td colspan="5" class="muted">Keine Einträge.</td></tr><% } %>
+    <% providers.forEach(p => { %>
+      <tr>
+        <td><a href="/admin/anbieter/<%= p.id %>"><strong><%= p.name %></strong></a><div class="sub"><%= p.city %><% if (p.submitted_by_email) { %> · eingereicht von <%= p.submitted_by_name %> (<%= p.submitted_by_email %>)<% } %></div></td>
+        <td class="small"><%= p.categories.map(c => c.name).join(', ') || '–' %></td>
+        <td class="nowrap small"><%= formatRating(p.avg_rating) %> ★ <span class="muted">(<%= p.review_count %>)</span></td>
+        <td><span class="badge badge-<%= p.status %>"><%= { pending: 'Zur Prüfung', published: 'Online', rejected: 'Abgelehnt' }[p.status] %></span></td>
+        <td class="nowrap" style="text-align:right">
+          <% if (p.status === 'pending') { %>
+            <form class="inline-form" method="post" action="/admin/anbieter/<%= p.id %>/status"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="status" value="published"><button class="btn btn-success btn-sm">Freigeben</button></form>
+            <form class="inline-form" method="post" action="/admin/anbieter/<%= p.id %>/status"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="status" value="rejected"><button class="btn btn-secondary btn-sm">Ablehnen</button></form>
+          <% } %>
+          <a class="btn btn-ghost btn-sm" href="/admin/anbieter/<%= p.id %>">Bearbeiten</a>
+        </td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/admin-end') %>

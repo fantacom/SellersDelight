@@ -1,0 +1,71 @@
+<%- include('../partials/admin-start') %>
+<div class="breadcrumb"><a href="/admin/benutzer">Benutzer</a> / <%= editUser.name %></div>
+<h1><%= editUser.name %></h1>
+
+<div class="card">
+  <form method="post" action="/admin/benutzer/<%= editUser.id %>">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="grid-3">
+      <div class="field"><label>Name</label><input type="text" name="name" value="<%= editUser.name %>" required maxlength="100"></div>
+      <div class="field"><label>E-Mail</label><input type="email" value="<%= editUser.email %>" disabled></div>
+      <div class="field"><label>Rolle</label><select name="role"><option value="editor" <%= editUser.role === 'editor' ? 'selected' : '' %>>Bearbeiter</option><option value="admin" <%= editUser.role === 'admin' ? 'selected' : '' %>>Administrator</option></select></div>
+    </div>
+    <div class="field"><label class="check"><input type="checkbox" name="active" value="1" <%= editUser.active ? 'checked' : '' %>> Zugang aktiv</label></div>
+    <button class="btn">Speichern</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>Zugangslink</h3>
+  <p class="muted small"><%= editUser.password_hash ? 'Der Benutzer hat ein Passwort. Ein neuer Link ermöglicht das Zurücksetzen.' : 'Der Benutzer hat seinen Zugang noch nicht aktiviert.' %>
+    <% if (editUser.invite_expires && editUser.invite_expires > Date.now()) { %> Offener Link gültig bis <%= new Date(editUser.invite_expires).toLocaleDateString('de-DE') %>.<% } %></p>
+  <form method="post" action="/admin/benutzer/<%= editUser.id %>/einladen"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-secondary"><%= editUser.password_hash ? 'Link zum Zurücksetzen senden' : 'Einladung (erneut) senden' %></button></form>
+</div>
+
+<% if (editUser.role === 'editor') { %>
+<div class="card">
+  <h3>Zugewiesene Anbieter &amp; Rechte</h3>
+  <% if (assignments.length) { %>
+  <div class="table-wrap" style="margin-bottom:18px">
+    <table>
+      <thead><tr><th>Anbieter</th><th>Darf bearbeiten</th><th></th></tr></thead>
+      <tbody>
+      <% assignments.forEach(a => { %>
+        <tr>
+          <td><a href="/admin/anbieter/<%= a.provider_id %>"><strong><%= a.provider_name %></strong></a></td>
+          <td>
+            <form method="post" action="/admin/benutzer/<%= editUser.id %>/zuweisen" data-autosubmit class="perm-checks">
+              <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="provider_id" value="<%= a.provider_id %>">
+              <label class="check"><input type="checkbox" name="can_edit_master" value="1" <%= a.can_edit_master ? 'checked' : '' %>> Firmendaten</label>
+              <label class="check"><input type="checkbox" name="can_edit_description" value="1" <%= a.can_edit_description ? 'checked' : '' %>> Beschreibung</label>
+              <label class="check"><input type="checkbox" name="can_edit_products" value="1" <%= a.can_edit_products ? 'checked' : '' %>> Produkte</label>
+            </form>
+          </td>
+          <td style="text-align:right"><form class="inline-form" method="post" action="/admin/benutzer/<%= editUser.id %>/zuweisung/<%= a.provider_id %>/entfernen"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-danger btn-sm">Entfernen</button></form></td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } else { %><p class="muted small">Noch keine Anbieter zugewiesen.</p><% } %>
+  <form method="post" action="/admin/benutzer/<%= editUser.id %>/zuweisen">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="field"><label>Anbieter zuweisen</label>
+      <select name="provider_id" required><option value="">– auswählen –</option><% allProviders.forEach(p => { %><option value="<%= p.id %>"><%= p.name %><%= p.status !== 'published' ? ' (nicht öffentlich)' : '' %></option><% }) %></select>
+    </div>
+    <div class="perm-checks field">
+      <label class="check"><input type="checkbox" name="can_edit_master" value="1" checked> Firmendaten</label>
+      <label class="check"><input type="checkbox" name="can_edit_description" value="1" checked> Beschreibung</label>
+      <label class="check"><input type="checkbox" name="can_edit_products" value="1" checked> Produkte</label>
+    </div>
+    <button class="btn btn-secondary">Zuweisen</button>
+  </form>
+</div>
+<% } %>
+
+<% if (editUser.id !== user.id) { %>
+<div class="card">
+  <form method="post" action="/admin/benutzer/<%= editUser.id %>/loeschen" data-confirm="Benutzer „<%= editUser.name %>“ löschen?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-danger">Benutzer löschen</button></form>
+</div>
+<% } %>
+<%- include('../partials/admin-end') %>

@@ -1,0 +1,15 @@
+<%- include('../partials/head') %>
+<main>
+  <div class="container narrow" style="padding:36px 20px 40px">
+    <div class="breadcrumb"><a href="/konto">Mein Konto</a> / <%= provider.name %></div>
+    <h1><%= provider.name %> bearbeiten</h1>
+    <p class="muted">Änderungen sind nach dem Speichern sofort sichtbar.<% if (provider.status === 'published') { %> <a href="/anbieter/<%= provider.slug %>" target="_blank">Öffentliches Profil ansehen ↗</a><% } %></p>
+    <%- include('../partials/flash') %>
+    <%- include('../partials/errors', { errors }) %>
+    <form method="post">
+      <%- include('../partials/provider-form', { provider, sections, mode: 'editor' }) %>
+      <div class="sticky-actions"><div class="btn-row"><button class="btn" type="submit">Speichern</button><a class="btn btn-ghost" href="/konto">Abbrechen</a></div></div>
+    </form>
+  </div>
+</main>
+<%- include('../partials/foot') %>

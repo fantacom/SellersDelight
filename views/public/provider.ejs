@@ -1,0 +1,132 @@
+<%- include('../partials/head') %>
+<%
+  const initials = provider.name.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  const addr = [provider.street, [provider.zip, provider.city].filter(Boolean).join(' '), provider.country].filter(Boolean);
+  const total = provider.review_count;
+  const host = (u) => { try { return new URL(u).host.replace(/^www\./, ''); } catch { return u; } };
+%>
+<main>
+  <% if (provider.status !== 'published') { %>
+    <div class="container"><div class="alert alert-info" style="margin-top:16px">Vorschau: Dieser Anbieter ist nicht öffentlich (Status: <%= provider.status %>). <a href="/admin/anbieter/<%= provider.id %>">Im Backend bearbeiten</a></div></div>
+  <% } %>
+  <section class="profile-head">
+    <div class="container">
+      <div class="avatar lg"><%= initials %></div>
+      <div class="summary">
+        <div class="breadcrumb"><a href="/">Start</a><% if (provider.categories[0]) { %> / <a href="/kategorie/<%= provider.categories[0].slug %>"><%= provider.categories[0].name %></a><% } %></div>
+        <h1><%= provider.name %><% if (provider.legal_form && !provider.name.includes(provider.legal_form)) { %> <span class="muted" style="font-weight:500;font-size:.6em"><%= provider.legal_form %></span><% } %></h1>
+        <p class="muted" style="margin:0 0 10px"><%= provider.short_description %></p>
+        <div class="tags"><% provider.categories.forEach(c => { %><a class="tag" href="/kategorie/<%= c.slug %>"><%= c.name %></a><% }) %></div>
+      </div>
+      <div class="head-rating">
+        <div class="score"><%= formatRating(provider.avg_rating) %></div>
+        <%- include('../partials/stars', { value: provider.avg_rating, size: 'lg' }) %>
+        <div class="small muted"><%= total %> <%= total === 1 ? 'Bewertung' : 'Bewertungen' %></div>
+        <a class="btn btn-sm" href="#bewerten" style="margin-top:10px">Jetzt bewerten</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="container">
+    <%- include('../partials/flash') %>
+    <div class="profile-layout">
+      <div>
+        <% if (provider.description) { %>
+        <div class="card"><h2>Über <%= provider.name %></h2><div class="prose"><%- paragraphs(provider.description) %></div></div>
+        <% } %>
+
+        <% if (provider.products.length) { %>
+        <div class="card">
+          <h2>Produkte &amp; Leistungen</h2>
+          <div class="products">
+            <% provider.products.forEach(pr => { %>
+            <div class="product">
+              <div>
+                <h4><%= pr.name %></h4>
+                <% if (pr.description) { %><p><%= pr.description %></p><% } %>
+                <% if (pr.price_info) { %><div class="price"><%= pr.price_info %></div><% } %>
+              </div>
+              <% if (pr.url) { %><a class="btn btn-secondary btn-sm nowrap" href="<%= pr.url %>" target="_blank" rel="noopener nofollow">Zum Angebot ↗</a><% } %>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+        <% } %>
+
+        <div class="card" id="bewertungen">
+          <h2>Bewertungen</h2>
+          <% if (reviews.length) { reviews.forEach(r => { %>
+            <article class="review">
+              <div class="review-head">
+                <%- include('../partials/stars', { value: r.rating, size: '' }) %>
+                <span class="who"><%= formatDate(r.created_at) %></span>
+              </div>
+              <% if (r.title) { %><h4><%= r.title %></h4><% } %>
+              <div class="prose"><%- paragraphs(r.comment) %></div>
+              <div class="who">— <%= r.author_name %></div>
+            </article>
+          <% }) } else { %>
+            <p class="muted">Noch keine Bewertungen. Seien Sie der Erste!</p>
+          <% } %>
+        </div>
+
+        <div class="card" id="bewerten">
+          <h2>Erfahrung teilen</h2>
+          <p class="muted small">Ihre Bewertung wird vor der Veröffentlichung geprüft. Ihre E-Mail-Adresse wird nicht angezeigt.</p>
+          <%- include('../partials/errors', { errors }) %>
+          <form method="post" action="/anbieter/<%= provider.slug %>/bewerten#bewerten" novalidate>
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <div class="hp" aria-hidden="true"><label>Homepage <input type="text" name="homepage" tabindex="-1" autocomplete="off"></label></div>
+            <div class="field">
+              <label id="rating-label">Ihre Bewertung *</label>
+              <div class="star-input" role="radiogroup" aria-labelledby="rating-label">
+                <% for (let s = 5; s >= 1; s--) { %>
+                  <input type="radio" id="star<%= s %>" name="rating" value="<%= s %>" <%= Number(form.rating) === s ? 'checked' : '' %>>
+                  <label for="star<%= s %>" title="<%= s %> Sterne"><span class="sr-only"><%= s %> Sterne</span><%- include('../partials/icon', { name: 'star' }).replace('fill="none"', 'fill="currentColor"') %></label>
+                <% } %>
+              </div>
+            </div>
+            <div class="field"><label for="r-title">Überschrift <span class="hint">optional</span></label><input id="r-title" type="text" name="title" value="<%= form.title || '' %>" maxlength="120"></div>
+            <div class="field"><label for="r-comment">Ihre Erfahrung *</label><textarea id="r-comment" name="comment" maxlength="4000" placeholder="Was lief gut, was weniger? Wie war Kommunikation, Qualität, Preis-Leistung?"><%= form.comment || '' %></textarea></div>
+            <div class="grid-2">
+              <div class="field"><label for="r-name">Name * <span class="hint">wird angezeigt, z. B. „Max M." oder Firmenname</span></label><input id="r-name" type="text" name="author_name" value="<%= form.author_name || '' %>" maxlength="80"></div>
+              <div class="field"><label for="r-email">E-Mail * <span class="hint">wird nicht veröffentlicht</span></label><input id="r-email" type="email" name="author_email" value="<%= form.author_email || '' %>" maxlength="150"></div>
+            </div>
+            <div class="field"><label class="check"><input type="checkbox" name="consent" value="1" <%= form.consent ? 'checked' : '' %>> <span>Ich habe die <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen und bestätige, dass meine Bewertung auf eigener Erfahrung beruht.</span></label></div>
+            <button class="btn" type="submit">Bewertung absenden</button>
+          </form>
+        </div>
+      </div>
+
+      <aside>
+        <div class="card">
+          <h3>Unternehmensdaten</h3>
+          <ul class="facts">
+            <li><span class="k">Firma</span><span class="v"><%= provider.name %><%= provider.legal_form && !provider.name.includes(provider.legal_form) ? ' ' + provider.legal_form : '' %></span></li>
+            <% if (addr.length) { %><li><span class="k">Adresse</span><span class="v"><%- addr.map(a => a.replace(/&/g,'&amp;').replace(/</g,'&lt;')).join('<br>') %></span></li><% } %>
+            <% if (provider.founded_year) { %><li><span class="k">Gegründet</span><span class="v"><%= provider.founded_year %> (seit <%= new Date().getFullYear() - provider.founded_year %> Jahren)</span></li><% } %>
+            <% if (provider.employees) { %><li><span class="k">Mitarbeiter</span><span class="v"><%= provider.employees %></span></li><% } %>
+            <% if (provider.website) { %><li><span class="k">Website</span><span class="v"><a href="<%= provider.website %>" target="_blank" rel="noopener nofollow"><%= host(provider.website) %></a></span></li><% } %>
+            <% if (provider.email) { %><li><span class="k">E-Mail</span><span class="v"><a href="mailto:<%= provider.email %>"><%= provider.email %></a></span></li><% } %>
+            <% if (provider.phone) { %><li><span class="k">Telefon</span><span class="v"><a href="tel:<%= provider.phone.replace(/[^+\d]/g, '') %>"><%= provider.phone %></a></span></li><% } %>
+          </ul>
+        </div>
+        <% if (total) { %>
+        <div class="card">
+          <h3>Bewertungsverteilung</h3>
+          <div class="dist">
+            <% for (let s = 5; s >= 1; s--) { const n = distribution[s]; %>
+              <span><%= s %> ★</span><span class="bar"><span style="width:<%= (n / total * 100).toFixed(0) %>%"></span></span><span><%= n %></span>
+            <% } %>
+          </div>
+        </div>
+        <% } %>
+        <div class="card">
+          <h3>Sind Sie <%= provider.name %>?</h3>
+          <p class="small muted" style="margin:0">Pflegen Sie Ihr Profil selbst: <% if (contactEmail) { %><a href="mailto:<%= contactEmail %>?subject=<%= encodeURIComponent('Zugang für ' + provider.name) %>">Schreiben Sie uns</a><% } else { %>Schreiben Sie uns<% } %>, wir richten Ihnen einen Zugang ein.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>
+<%- include('../partials/foot') %>
